@@ -1,14 +1,18 @@
-
 substitutions:
   devicename: mqsensors
+  friendly_name: MQSensors
   board: esp32dev
+  ota_password: !secret esphome_ota_password
+  ap_password: !secret esphome_ap_password
   gpio_mq135: GPIO35
   gpio_mq2: GPIO34
-  gpio_sda: GPIO_32
-  gpio_scl: GPIO_33
+  gpio_sda: GPIO32
+  gpio_scl: GPIO33
   
 esphome:
   name: $devicename
+  friendly_name: $friendly_name
+  name_add_mac_suffix: false
  
 esp32:
   board: $board
@@ -23,8 +27,8 @@ wifi:
   - ssid: !secret wifi_ssid
     password: !secret wifi_password    
   ap:
-    ssid: "$devicename Fallback Hotspot"
-    password: !secret ap_password
+    ssid: "$friendly_name Fallback Hotspot"
+    password: $ap_password
       
 logger:
 
@@ -38,7 +42,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    password: $ota_password
 
 captive_portal:
 
@@ -184,6 +188,7 @@ sensor:
       name: "Temperature"
       id: temp
       icon: mdi:home-thermometer-outline
+      internal: True
     humidity:
       name: "Humidity"
       id: hum
@@ -192,9 +197,10 @@ sensor:
       - lambda: if ((id(temp).state)>=0) {return (id(hum).raw_state + (25.0 - id(temp).state) * (-0.15));} else {return id(hum).raw_state;}
     update_interval: 30s
 
-  - platform: adc # MQ135 sensor
+    # MQ135 sensor
+  - platform: adc 
     pin: $gpio_mq135
-    name: ""$devicename MQ-135 Raw"
+    name: "$devicename MQ-135 Raw"
     id: sensor_volt
     attenuation: 12db
     accuracy_decimals: 4
@@ -268,10 +274,6 @@ sensor:
     unit_of_measurement: ppm
     icon: mdi:molecule-co2
     accuracy_decimals: 0
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: critic_group   
-        sorting_weight: 75
 
   - platform: template
     # Get the ppm of CO2 sensed (assuming only CO2 in the air), corrected  for temp. The ppm of CO2 in the air
@@ -300,11 +302,7 @@ sensor:
     unit_of_measurement: ppm
     id: corrected_ppm_co2
     accuracy_decimals: 0
-    icon: mdi:molecule-co2
-    web_server: 
-      web_server_id: webserver_sort
-      sorting_group_id: info_group
-      sorting_weight: 34 
+    icon: mdi:molecule-co2 
     filters:
       - skip_initial: 30  
       - delta: 0.1%  
@@ -341,10 +339,6 @@ sensor:
           window_size: 15
           send_every: 1
     icon: mdi:resistor
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: critic_group   
-        sorting_weight: 73 
     update_interval: 5s
     accuracy_decimals: 3
     unit_of_measurement: kOm
@@ -376,11 +370,6 @@ text_sensor:
       return {to_string(id(RZERO))};
     update_interval: 10s
     icon: mdi:resistor
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: critic_group   
-        sorting_weight: 72 
-
 
   - platform: template
     name: 'PPM CO2 Default'
@@ -389,7 +378,3 @@ text_sensor:
       return {to_string(id(ATMOCO2))};
     update_interval: 10s
     icon: mdi:molecule-co2
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: critic_group   
-        sorting_weight: 74
