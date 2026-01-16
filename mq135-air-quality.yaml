@@ -200,7 +200,7 @@ sensor:
     # MQ135 sensor
   - platform: adc 
     pin: $gpio_mq135
-    name: "$devicename MQ-135 Raw"
+    name: "MQ-135 Raw"
     id: sensor_volt
     attenuation: 12db
     accuracy_decimals: 4
@@ -351,7 +351,7 @@ sensor:
   # DIY MQ-2 Smoke Sensor for Home Assistant
   - platform: adc
     pin: $gpio_mq2
-    name: "$devicename MQ-2 Raw" 
+    name: "MQ-2 Raw" 
     attenuation: 12db
     accuracy_decimals: 3
     update_interval: 10s                
