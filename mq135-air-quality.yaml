@@ -204,7 +204,7 @@ sensor:
     id: sensor_volt
     attenuation: 12db
     accuracy_decimals: 4
-    update_interval: 10s                
+    update_interval: 1s                
     filters:
       - exponential_moving_average:
           alpha: 0.07
@@ -298,7 +298,7 @@ sensor:
       } else {
         return (pow(10, (log10(id(corrected_resistance).state / id(RZERO)) - id(PARB)) / id(PARA)));
       }
-    update_interval: 1s
+    update_interval: 5s
     unit_of_measurement: ppm
     id: corrected_ppm_co2
     accuracy_decimals: 0
