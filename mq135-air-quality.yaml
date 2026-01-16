@@ -1,8 +1,17 @@
+
+substitutions:
+  devicename: mqsensors
+  board: esp32dev
+  gpio_mq135: GPIO35
+  gpio_mq2: GPIO34
+  gpio_sda: GPIO_32
+  gpio_scl: GPIO_33
+  
 esphome:
-  name: "mq135-air-quality"
+  name: $devicename
  
 esp32:
-  board: esp32-c6-devkitc-1
+  board: $board
   framework:
     type: esp-idf
 
@@ -14,30 +23,22 @@ wifi:
   - ssid: !secret wifi_ssid
     password: !secret wifi_password    
   ap:
- 
+    ssid: "$devicename Fallback Hotspot"
+    password: !secret ap_password
       
 logger:
- 
-web_server:
-  log: True
-  local: True
-  port: 80
-  include_internal: False
-  version: 3
-  id: webserver_sort
-  sorting_groups:
-    - id: info_group
-      name: "Environmental Life Data"
-      sorting_weight: 10
-    - id: critic_group
-      name: "Critical works"
-      sorting_weight: 60    
+
+i2c:
+  sda: $gpio_sda
+  scl: $gpio_scl
+  scan: False
+  id: bus_a
   
 api:
 
 ota:
   - platform: esphome
-    password: "xxxXXXxxx"
+    password: !secret ota_password
 
 captive_portal:
 
@@ -59,8 +60,17 @@ globals:
   - id: ATMOCO2
     type: float
     restore_value: no
-    initial_value: '90485'   
-
+    initial_value: '90485'  
+    
+#Parameters for calculating ppm of CO2 from sensor resistance
+#  Exponential regression:
+#  GAS      | a      | b
+#  CO       | 605.18 | -3.937  
+#  Alcohol  | 77.255 | -3.18 
+#  CO2      | 110.47 | -2.862
+#  Tolueno  | 44.947 | -3.445
+#  NH4      | 102.2  | -2.473
+#  Acetona  | 34.668 | -3.369
   - id: PARA
     type: float
     restore_value: no
@@ -112,13 +122,6 @@ globals:
     restore_value: no
     initial_value: '1'
 
-
-
-
-light: 
-
-
-
 button:
   - platform: template
     id: calibration
@@ -130,37 +133,21 @@ button:
             id(RZERO) = id(r_zero).state;
             id(ATMOCO2) = id(ppm_co2).state; 
     entity_category: config
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: critic_group   
-        sorting_weight: 77   
-
 
   - platform: restart
     name: "System restart"
     entity_category: config
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: critic_group   
-        sorting_weight: 60     
 
   - platform: factory_reset
     name: "Return to Factory settings"
     entity_category: config
-    web_server: 
-      web_server_id: webserver_sort
-      sorting_group_id: critic_group    
-      sorting_weight: 61     
-
-
-switch:
 
 sensor:
  
   - platform: uptime
     type: seconds
     name: Uptime Sensor
-    id: acilistan_gecen_sure_seconds
+    id: uptime_seconds
     internal: True
 
   - platform: template
@@ -171,11 +158,7 @@ sensor:
     accuracy_decimals: 0  
     id: temp_ort
     device_class: temperature
-    icon: mdi:home-thermometer-outline
-    web_server: 
-          web_server_id: webserver_sort
-          sorting_group_id: info_group
-          sorting_weight: 16    
+    icon: mdi:home-thermometer-outline   
      
   - platform: copy  
     name: "Apparent temperature"
@@ -185,11 +168,7 @@ sensor:
     icon: mdi:thermometer-lines
     source_id:  temp
     filters:
-      - lambda:   return round(id(temp).state + ( ( (id(hum).state / 100) * 6.105 * 2.71828 *  ((17.27 * id(temp).state) / (237.7 + id(temp).state))  ) * 0.33 ) - 4  ); 
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: info_group
-        sorting_weight: 27    
+      - lambda:   return round(id(temp).state + ( ( (id(hum).state / 100) * 6.105 * 2.71828 *  ((17.27 * id(temp).state) / (237.7 + id(temp).state))  ) * 0.33 ) - 4  );    
 
   - platform: absolute_humidity
     name: "Absolute Humidity"
@@ -199,48 +178,35 @@ sensor:
     icon: mdi:water-opacity
     humidity: hum
     accuracy_decimals: 0
-    web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: info_group
-        sorting_weight: 29
-        
-  - platform: dht # DHT11 sensor
-    pin: GPIO0
-    model: DHT11
-    id: dht_sensoru
-    
+
+  - platform: htu21d
     temperature:
-      id: temp
-      internal: True
       name: "Temperature"
-      accuracy_decimals: 0
+      id: temp
       icon: mdi:home-thermometer-outline
-      web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: info_group
-        sorting_weight: 26     
-    
     humidity:
+      name: "Humidity"
       id: hum
-      name: "Humudity"
       icon: mdi:water-percent
-      web_server: 
-        web_server_id: webserver_sort
-        sorting_group_id: info_group
-        sorting_weight: 28     
- 
+      filters:
+      - lambda: if ((id(temp).state)>=0) {return (id(hum).raw_state + (25.0 - id(temp).state) * (-0.15));} else {return id(hum).raw_state;}
+    update_interval: 30s
 
   - platform: adc # MQ135 sensor
-    pin: GPIO4
-    name: "Gas ADC"
-    update_interval: 1s
-    filters:
-      - multiply: 3.3 # for ESP32 C6 Mini
-    accuracy_decimals: 4
-    unit_of_measurement: V
+    pin: $gpio_mq135
+    name: ""$devicename MQ-135 Raw"
     id: sensor_volt
-    internal: True
-
+    attenuation: 12db
+    accuracy_decimals: 4
+    update_interval: 10s                
+    filters:
+      - exponential_moving_average:
+          alpha: 0.07
+          send_every: 1
+    unit_of_measurement: "V"
+    icon: "mdi:percent"
+    #internal: True
+    
   - platform: template
     #Linearization of the temperature dependency curve under and above 20 degree C
     #below 20degC: fact = a * t * t - b * t - (h - 33) * d
@@ -258,7 +224,7 @@ sensor:
     update_interval: 10s
     accuracy_decimals: 6
     id: correction_factor
-    internal: True
+    #internal: True
 
   - platform: template
     #Get the resistance of the sensor, ie. the measurement value @return The sensor resistance in kOhm
@@ -272,7 +238,7 @@ sensor:
     accuracy_decimals: 3
     unit_of_measurement: kOm
     id: resistance
-    internal: True
+    #internal: True
 
   - platform: template
     # Get the resistance of the sensor, ie. the measurement value correctedfor temp/hum @return The corrected sensor resistance kOhm
@@ -284,7 +250,7 @@ sensor:
     accuracy_decimals: 3
     unit_of_measurement: kOm
     id: corrected_resistance
-    internal: True
+    #internal: True
 
   - platform: template
     # Get the ppm of CO2 sensed (assuming only CO2 in the air). The ppm of CO2 in the air
@@ -298,10 +264,9 @@ sensor:
       } else {
         return (pow(10, (log10(id(resistance).state / id(RZERO)) - id(PARB)) / id(PARA)));
       }
-    update_interval: 1s
+    update_interval: 5s
     unit_of_measurement: ppm
     icon: mdi:molecule-co2
-
     accuracy_decimals: 0
     web_server: 
         web_server_id: webserver_sort
@@ -388,11 +353,21 @@ sensor:
                     # https://github.com/Bobbo117/MQ135-Air-Quality-Sensor
                     # https://www.reddit.com/r/arduino/comments/1b5xp9t/seeking_help_to_calibrate_the_mq135_module/
                     # https://www.google.com/search?q=how+to+calibrate+mq+135
+
+  # DIY MQ-2 Smoke Sensor for Home Assistant
+  - platform: adc
+    pin: $gpio_mq2
+    name: "$devicename MQ-2 Raw" 
+    attenuation: 12db
+    accuracy_decimals: 3
+    update_interval: 10s                
+    filters:
+      - exponential_moving_average:
+          alpha: 0.15
+          send_every: 1
+    unit_of_measurement: "V"
+    icon: "mdi:percent"
                      
-
-binary_sensor:
-
-
 text_sensor:
   - platform: template
     name: 'RZERO Default'
