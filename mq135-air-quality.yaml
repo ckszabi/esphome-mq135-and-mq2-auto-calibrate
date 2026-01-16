@@ -211,7 +211,7 @@ sensor:
           send_every: 1
     unit_of_measurement: "V"
     icon: "mdi:percent"
-    #internal: True
+    disabled_by_default: true
     
   - platform: template
     #Linearization of the temperature dependency curve under and above 20 degree C
@@ -230,7 +230,7 @@ sensor:
     update_interval: 10s
     accuracy_decimals: 6
     id: correction_factor
-    #internal: True
+    internal: True
 
   - platform: template
     #Get the resistance of the sensor, ie. the measurement value @return The sensor resistance in kOhm
@@ -244,7 +244,7 @@ sensor:
     accuracy_decimals: 3
     unit_of_measurement: kOm
     id: resistance
-    #internal: True
+    internal: True
 
   - platform: template
     # Get the resistance of the sensor, ie. the measurement value correctedfor temp/hum @return The corrected sensor resistance kOhm
@@ -256,7 +256,7 @@ sensor:
     accuracy_decimals: 3
     unit_of_measurement: kOm
     id: corrected_resistance
-    #internal: True
+    internal: True
 
   - platform: template
     # Get the ppm of CO2 sensed (assuming only CO2 in the air). The ppm of CO2 in the air
@@ -344,6 +344,7 @@ sensor:
     unit_of_measurement: kOm
     id: corrected_r_zero
     internal: False 
+    disabled_by_default: true
                     # https://github.com/Bobbo117/MQ135-Air-Quality-Sensor
                     # https://www.reddit.com/r/arduino/comments/1b5xp9t/seeking_help_to_calibrate_the_mq135_module/
                     # https://www.google.com/search?q=how+to+calibrate+mq+135
@@ -361,18 +362,20 @@ sensor:
           send_every: 1
     unit_of_measurement: "V"
     icon: "mdi:percent"
+    disabled_by_default: true
                      
 text_sensor:
   - platform: template
-    name: 'RZERO Default'
+    name: 'RZERO reference'
     id: 'rzero_value'
     lambda: |-
       return {to_string(id(RZERO))};
     update_interval: 10s
     icon: mdi:resistor
+    disabled_by_default: true
 
   - platform: template
-    name: 'PPM CO2 Default'
+    name: 'PPM CO2 reference'
     id: 'atm0co2_value'
     lambda: |-
       return {to_string(id(ATMOCO2))};
