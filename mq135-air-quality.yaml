@@ -171,6 +171,7 @@ sensor:
     device_class: temperature
     icon: mdi:thermometer-lines
     source_id:  temp
+    disabled_by_default: true
     filters:
       - lambda:   return round(id(temp).state + ( ( (id(hum).state / 100) * 6.105 * 2.71828 *  ((17.27 * id(temp).state) / (237.7 + id(temp).state))  ) * 0.33 ) - 4  );    
 
@@ -182,6 +183,7 @@ sensor:
     icon: mdi:water-opacity
     humidity: hum
     accuracy_decimals: 0
+    disabled_by_default: true
 
   - platform: htu21d
     temperature:
